@@ -1,11 +1,14 @@
 # /bin/env python3
+
+# Exemples: https://gist.github.com/acbetter/32c575803ec361c3e82064e60db4e3e0
+
 import os
 import sys
 import zipfile
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import QApplication, QMainWindow, QListWidgetItem
+from PyQt5.QtWidgets import QApplication, QMainWindow, QListWidgetItem, QSizePolicy, QLabel
 from PyQt5.uic import loadUi
 
 
@@ -13,7 +16,18 @@ class CBZArchive(zipfile.ZipFile):
     def __init__(self, filename):
         super().__init__(filename)
 
+        self.short_filename = os.path.basename(self.filename)
+        self.pages_list = []
+        self.get_pages_list()
         self.pages_count = len(self.filelist)
+
+    def get_pages_list(self):
+        allowed_extensions = (".jpg", ".jpeg", ".jp2", ".png", ".bmp", ".gif")
+        for item in self.filelist:
+            filename, extension = os.path.splitext(item.filename)
+
+            if extension in allowed_extensions:
+                self.pages_list.append(item.filename)
 
     def cbz_metadata_parse(self):
         pass
@@ -37,17 +51,45 @@ class MainWindow(QMainWindow):
     def init_ui(self):
         loadUi(os.path.join(os.path.dirname(__file__), "ui.ui"), self)
 
+        # Image viewer
+        self.label.setAlignment(Qt.AlignCenter)
+        self.label.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
+        self.label.setScaledContents(True)
+        #self.label = QLabel()
+        #self.label.setMinimalSize()
+
+        # Taille QListWidget
+
+
+
     def init_events(self):
         self.listWidget.currentItemChanged.connect(self.when_current_item_changed)
         self.pushButton.clicked.connect(self.move_to_previous_page)
         self.pushButton_2.clicked.connect(self.move_to_next_page)
 
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Left:
+            self.move_to_previous_page()
+
+        if event.key() == Qt.Key_Right:
+            self.move_to_next_page()
+
+    def open(self):
+        pass
+
     def load_cbz_archive(self):
-        self.cbz_archive = CBZArchive("/home/seigneurfuo/NAS/Temporaire/Megami Magazine/Megami #108 2009-05.cbz")
+        self.cbz_archive = CBZArchive("/home/seigneurfuo/NAS/Fichiers/Goodies & bonus animés/Samurai Pizza Cats/Samurai Pizza Cats Official Fanbook.cbz")
+        self.cbz_archive.get_pages_list()
 
     def fill_gui(self):
+        self.set_window_title()
         self.fill_pages_counter()
         self.fill_pages_list()
+
+    def set_window_title(self):
+        current_page = self.current_page_index + 1
+        msg = "[Page {} / {}] {}".format(current_page, self.cbz_archive.pages_count, self.cbz_archive.short_filename)
+        self.setWindowTitle(msg)
 
     def fill_pages_counter(self):
         msg = "{} Pages".format(self.cbz_archive.pages_count)
@@ -59,17 +101,19 @@ class MainWindow(QMainWindow):
 
             self.listWidget.setCurrentRow(self.current_page_index)
             self.display_page(self.current_page_index)
+            self.set_window_title()
 
     def move_to_next_page(self):
         if self.current_page_index + 1 < self.cbz_archive.pages_count:
-            self.current_page_index -= 1
+            self.current_page_index += 1
 
             self.listWidget.setCurrentRow(self.current_page_index)
             self.display_page(self.current_page_index)
+            self.set_window_title()
 
     def fill_pages_list(self):
-        for index, file_data in enumerate(self.cbz_archive.filelist):
-            filename = str(file_data.filename)
+        for index, file_data in enumerate(self.cbz_archive.pages_list):
+            filename = file_data
             item = QListWidgetItem(filename)
             item.setData(Qt.UserRole, index)
 
@@ -82,20 +126,20 @@ class MainWindow(QMainWindow):
         index = int(item.data(Qt.UserRole))
 
         self.display_page(index)
+        self.set_window_title()
 
     def display_page(self, index):
         self.current_page_index = index
-        file = self.cbz_archive.filelist[index].filename
+        file = self.cbz_archive.pages_list[index]
 
         qpixmap = self.file_data_to_qpixmap(file)
         self.label.setPixmap(qpixmap)
-        self.label.setScaledContents(True)
 
     def file_data_to_qpixmap(self, file):
         filename, extension = os.path.splitext(file)
-        file_data = self.cbz_archive.read(file)
+        data = self.cbz_archive.read(file)
         qpixmap = QPixmap()
-        qpixmap.loadFromData(file_data, extension)
+        qpixmap.loadFromData(data, extension)
 
         return qpixmap
 
@@ -104,13 +148,9 @@ class Application(QApplication):
     def __init__(self, args):
         super().__init__(args)
 
-        self.name = "MyAnimeManager 3"
-        self.version = "DEV"
-        self.description = self.tr("Un gestionnaire de séries multiplateforme écrit en Python3 et Qt5")
-
-        self.setApplicationName(self.name)
-        self.setApplicationDisplayName(self.name)
-        self.setApplicationVersion(self.version)
+        self.setApplicationName("")
+        self.setApplicationDisplayName("")
+        self.setApplicationVersion("")
 
         self.mainwindow = MainWindow()
         self.mainwindow.show()

@@ -1,0 +1,7 @@
+- Zoom In
+- Zoom Out
+- Filechooser
+- Ratio à corriger
+- Adaptation plein écran
+- Touche plein écran
+- ~~ Filtrer les fichiers qui ne sont pas des images ~~
