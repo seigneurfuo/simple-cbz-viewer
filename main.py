@@ -37,14 +37,16 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.cbz_archive = object()
+        self.cbz_archive = None
         self.current_page_index = 0
 
         self.init_ui()
         self.init_events()
-
-        self.load_cbz_archive()
-        self.fill_gui()
+        print(sys.argv)
+        if len(sys.argv) > 1:
+            filename = sys.argv[1]
+            self.load_cbz_archive(filename)
+            self.fill_gui()
 
         self.show()
 
@@ -63,7 +65,7 @@ class MainWindow(QMainWindow):
 
 
     def init_events(self):
-        self.listWidget.currentItemChanged.connect(self.when_current_item_changed)
+        #self.listWidget.currentItemChanged.connect(self.when_current_item_changed)
         self.pushButton.clicked.connect(self.move_to_previous_page)
         self.pushButton_2.clicked.connect(self.move_to_next_page)
 
@@ -77,9 +79,10 @@ class MainWindow(QMainWindow):
     def open(self):
         pass
 
-    def load_cbz_archive(self):
-        self.cbz_archive = CBZArchive("/home/seigneurfuo/NAS/Fichiers/Goodies & bonus animés/Samurai Pizza Cats/Samurai Pizza Cats Official Fanbook.cbz")
-        self.cbz_archive.get_pages_list()
+    def load_cbz_archive(self, filename):
+        if os.path.isfile(filename):
+            self.cbz_archive = CBZArchive(filename)
+            self.cbz_archive.get_pages_list()
 
     def fill_gui(self):
         self.set_window_title()
@@ -96,20 +99,22 @@ class MainWindow(QMainWindow):
         self.label_2.setText(msg)
 
     def move_to_previous_page(self):
-        if self.current_page_index > 0:
-            self.current_page_index -= 1
+        if self.cbz_archive:
+            if self.current_page_index > 0:
+                self.current_page_index -= 1
 
-            self.listWidget.setCurrentRow(self.current_page_index)
-            self.display_page(self.current_page_index)
-            self.set_window_title()
+                #self.listWidget.setCurrentRow(self.current_page_index)
+                self.display_page(self.current_page_index)
+                self.set_window_title()
 
     def move_to_next_page(self):
-        if self.current_page_index + 1 < self.cbz_archive.pages_count:
-            self.current_page_index += 1
+        if self.cbz_archive:
+            if self.current_page_index + 1 < self.cbz_archive.pages_count:
+                self.current_page_index += 1
 
-            self.listWidget.setCurrentRow(self.current_page_index)
-            self.display_page(self.current_page_index)
-            self.set_window_title()
+                #self.listWidget.setCurrentRow(self.current_page_index)
+                self.display_page(self.current_page_index)
+                self.set_window_title()
 
     def fill_pages_list(self):
         for index, file_data in enumerate(self.cbz_archive.pages_list):
@@ -117,9 +122,11 @@ class MainWindow(QMainWindow):
             item = QListWidgetItem(filename)
             item.setData(Qt.UserRole, index)
 
-            self.listWidget.addItem(item)
+            #self.listWidget.addItem(item)
 
-        self.listWidget.setCurrentRow(0)
+        #self.listWidget.setCurrentRow(0)
+        if self.cbz_archive.pages_count >0 :
+            self.display_page(0)
 
     def when_current_item_changed(self):
         item = self.listWidget.currentItem()
@@ -133,7 +140,8 @@ class MainWindow(QMainWindow):
         file = self.cbz_archive.pages_list[index]
 
         qpixmap = self.file_data_to_qpixmap(file)
-        self.label.setPixmap(qpixmap)
+        resized_qpixmap = qpixmap.scaled(self.label.width(), self.label.height(), Qt.KeepAspectRatio)
+        self.label.setPixmap(resized_qpixmap)
 
     def file_data_to_qpixmap(self, file):
         filename, extension = os.path.splitext(file)
